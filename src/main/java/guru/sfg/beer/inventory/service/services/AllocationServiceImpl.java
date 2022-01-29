@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by jt on 2019-09-09.
@@ -22,24 +21,23 @@ public class AllocationServiceImpl implements AllocationService {
     private final BeerInventoryRepository beerInventoryRepository;
 
     @Override
-    public Boolean allocateOrder(BeerOrderDto beerOrderDto) {
+    public boolean allocateOrder(BeerOrderDto beerOrderDto) {
         log.debug("Allocating OrderId: " + beerOrderDto.getId());
 
-        AtomicInteger totalOrdered = new AtomicInteger();
-        AtomicInteger totalAllocated = new AtomicInteger();
+        int totalOrdered = 0;
+        int totalAllocated = 0;
 
-        beerOrderDto.getBeerOrderLines().forEach(beerOrderLine -> {
-            if ((((beerOrderLine.getOrderQuantity() != null ? beerOrderLine.getOrderQuantity() : 0)
-                    - (beerOrderLine.getQuantityAllocated() != null ? beerOrderLine.getQuantityAllocated() : 0)) > 0)) {
+        for(BeerOrderLineDto beerOrderLine : beerOrderDto.getBeerOrderLines()) {
+            if ((beerOrderLine.getOrderQuantity() != null ? beerOrderLine.getOrderQuantity() : 0)
+                    > (beerOrderLine.getQuantityAllocated() != null ? beerOrderLine.getQuantityAllocated() : 0)) {
                 allocateBeerOrderLine(beerOrderLine);
             }
-            totalOrdered.set(totalOrdered.get() + beerOrderLine.getOrderQuantity());
-            totalAllocated.set(totalAllocated.get() + (beerOrderLine.getQuantityAllocated() != null ? beerOrderLine.getQuantityAllocated() : 0));
-        });
+            totalOrdered  += beerOrderLine.getOrderQuantity();
+            totalAllocated  += (beerOrderLine.getQuantityAllocated() != null ? beerOrderLine.getQuantityAllocated() : 0);
+        }
+        log.debug("Total Ordered: " + totalOrdered + " Total Allocated: " + totalAllocated);
 
-        log.debug("Total Ordered: " + totalOrdered.get() + " Total Allocated: " + totalAllocated.get());
-
-        return totalOrdered.get() == totalAllocated.get();
+        return totalOrdered == totalAllocated;
     }
 
     private void allocateBeerOrderLine(BeerOrderLineDto beerOrderLine) {
